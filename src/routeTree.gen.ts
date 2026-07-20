@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedPropertiesRouteImport } from './routes/_authenticated/properties'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedChargesRouteImport } from './routes/_authenticated/charges'
 import { Route as AuthenticatedPropertiesIdRouteImport } from './routes/_authenticated/properties.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -40,6 +41,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedChargesRoute = AuthenticatedChargesRouteImport.update({
+  id: '/charges',
+  path: '/charges',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPropertiesIdRoute =
   AuthenticatedPropertiesIdRouteImport.update({
     id: '/$id',
@@ -50,6 +56,7 @@ const AuthenticatedPropertiesIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/charges': typeof AuthenticatedChargesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/charges': typeof AuthenticatedChargesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
@@ -66,20 +74,34 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/charges': typeof AuthenticatedChargesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/_authenticated/properties/$id': typeof AuthenticatedPropertiesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/properties' | '/properties/$id'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/charges'
+    | '/dashboard'
+    | '/properties'
+    | '/properties/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/properties' | '/properties/$id'
+  to:
+    | '/'
+    | '/auth'
+    | '/charges'
+    | '/dashboard'
+    | '/properties'
+    | '/properties/$id'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/charges'
     | '/_authenticated/dashboard'
     | '/_authenticated/properties'
     | '/_authenticated/properties/$id'
@@ -128,6 +150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/charges': {
+      id: '/_authenticated/charges'
+      path: '/charges'
+      fullPath: '/charges'
+      preLoaderRoute: typeof AuthenticatedChargesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/properties/$id': {
       id: '/_authenticated/properties/$id'
       path: '/$id'
@@ -153,11 +182,13 @@ const AuthenticatedPropertiesRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedChargesRoute: typeof AuthenticatedChargesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedPropertiesRoute: typeof AuthenticatedPropertiesRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedChargesRoute: AuthenticatedChargesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedPropertiesRoute: AuthenticatedPropertiesRouteWithChildren,
 }
