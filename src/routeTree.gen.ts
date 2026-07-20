@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedPropertiesRouteImport } from './routes/_authenticated/properties'
 import { Route as AuthenticatedProfitabilityRouteImport } from './routes/_authenticated/profitability'
 import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticated/payments'
+import { Route as AuthenticatedMoreRouteImport } from './routes/_authenticated/more'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChargesRouteImport } from './routes/_authenticated/charges'
@@ -51,6 +52,11 @@ const AuthenticatedPaymentsRoute = AuthenticatedPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMoreRoute = AuthenticatedMoreRouteImport.update({
+  id: '/more',
+  path: '/more',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedExpensesRoute = AuthenticatedExpensesRouteImport.update({
   id: '/expenses',
   path: '/expenses',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/charges': typeof AuthenticatedChargesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
+  '/more': typeof AuthenticatedMoreRoute
   '/payments': typeof AuthenticatedPaymentsRoute
   '/profitability': typeof AuthenticatedProfitabilityRoute
   '/properties': typeof AuthenticatedPropertiesRouteWithChildren
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/charges': typeof AuthenticatedChargesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
+  '/more': typeof AuthenticatedMoreRoute
   '/payments': typeof AuthenticatedPaymentsRoute
   '/profitability': typeof AuthenticatedProfitabilityRoute
   '/properties': typeof AuthenticatedPropertiesRouteWithChildren
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/_authenticated/charges': typeof AuthenticatedChargesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
+  '/_authenticated/more': typeof AuthenticatedMoreRoute
   '/_authenticated/payments': typeof AuthenticatedPaymentsRoute
   '/_authenticated/profitability': typeof AuthenticatedProfitabilityRoute
   '/_authenticated/properties': typeof AuthenticatedPropertiesRouteWithChildren
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/charges'
     | '/dashboard'
     | '/expenses'
+    | '/more'
     | '/payments'
     | '/profitability'
     | '/properties'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/charges'
     | '/dashboard'
     | '/expenses'
+    | '/more'
     | '/payments'
     | '/profitability'
     | '/properties'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/_authenticated/charges'
     | '/_authenticated/dashboard'
     | '/_authenticated/expenses'
+    | '/_authenticated/more'
     | '/_authenticated/payments'
     | '/_authenticated/profitability'
     | '/_authenticated/properties'
@@ -204,6 +216,13 @@ declare module '@tanstack/react-router' {
       path: '/payments'
       fullPath: '/payments'
       preLoaderRoute: typeof AuthenticatedPaymentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/more': {
+      id: '/_authenticated/more'
+      path: '/more'
+      fullPath: '/more'
+      preLoaderRoute: typeof AuthenticatedMoreRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/expenses': {
@@ -263,6 +282,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedChargesRoute: typeof AuthenticatedChargesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
+  AuthenticatedMoreRoute: typeof AuthenticatedMoreRoute
   AuthenticatedPaymentsRoute: typeof AuthenticatedPaymentsRoute
   AuthenticatedProfitabilityRoute: typeof AuthenticatedProfitabilityRoute
   AuthenticatedPropertiesRoute: typeof AuthenticatedPropertiesRouteWithChildren
@@ -273,6 +293,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChargesRoute: AuthenticatedChargesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
+  AuthenticatedMoreRoute: AuthenticatedMoreRoute,
   AuthenticatedPaymentsRoute: AuthenticatedPaymentsRoute,
   AuthenticatedProfitabilityRoute: AuthenticatedProfitabilityRoute,
   AuthenticatedPropertiesRoute: AuthenticatedPropertiesRouteWithChildren,
