@@ -80,10 +80,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Cuentas AI · Gestión de alquileres para propietarios" },
       { name: "description", content: "Cuentas AI te ayuda a saber exactamente qué está pasando con tus alquileres: quién te debe, cuánto cobraste y cuánto estás ganando." },
       { name: "author", content: "Cuentas AI" },
-      { property: "og:title", content: "Cuentas AI · Gestión de alquileres" },
-      { property: "og:description", content: "La fuente única de verdad para la gestión de tus alquileres." },
+      { property: "og:title", content: "Cuentas AI · Gestión de alquileres para propietarios" },
+      { property: "og:description", content: "Cuentas AI te ayuda a saber exactamente qué está pasando con tus alquileres: quién te debe, cuánto cobraste y cuánto estás ganando." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Cuentas AI · Gestión de alquileres para propietarios" },
+      { name: "twitter:description", content: "Cuentas AI te ayuda a saber exactamente qué está pasando con tus alquileres: quién te debe, cuánto cobraste y cuánto estás ganando." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f637540d-6704-46c1-8444-77b5df544a55/id-preview-5c3645b6--cc19a95c-e32e-44f6-9c8e-4d57e40654ed.lovable.app-1784507822949.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f637540d-6704-46c1-8444-77b5df544a55/id-preview-5c3645b6--cc19a95c-e32e-44f6-9c8e-4d57e40654ed.lovable.app-1784507822949.png" },
     ],
     links: [
       {
