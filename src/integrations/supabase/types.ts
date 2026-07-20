@@ -14,13 +14,486 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          description: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          owner_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          description: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          owner_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          description?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          owner_id?: string
+        }
+        Relationships: []
+      }
+      charges: {
+        Row: {
+          amount_expected: number
+          concept: string
+          contract_id: string | null
+          created_at: string
+          due_date: string
+          id: string
+          owner_id: string
+          period_month: number
+          period_year: number
+          status: string
+          tenant_id: string | null
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_expected: number
+          concept?: string
+          contract_id?: string | null
+          created_at?: string
+          due_date: string
+          id?: string
+          owner_id: string
+          period_month: number
+          period_year: number
+          status?: string
+          tenant_id?: string | null
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_expected?: number
+          concept?: string
+          contract_id?: string | null
+          created_at?: string
+          due_date?: string
+          id?: string
+          owner_id?: string
+          period_month?: number
+          period_year?: number
+          status?: string
+          tenant_id?: string | null
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charges_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charges_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          created_at: string
+          deposit_amount: number | null
+          document_url: string | null
+          end_date: string | null
+          guarantee_amount: number | null
+          id: string
+          owner_id: string
+          rent_amount: number
+          special_conditions: string | null
+          start_date: string
+          status: string
+          tenant_id: string
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deposit_amount?: number | null
+          document_url?: string | null
+          end_date?: string | null
+          guarantee_amount?: number | null
+          id?: string
+          owner_id: string
+          rent_amount: number
+          special_conditions?: string | null
+          start_date: string
+          status?: string
+          tenant_id: string
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deposit_amount?: number | null
+          document_url?: string | null
+          end_date?: string | null
+          guarantee_amount?: number | null
+          id?: string
+          owner_id?: string
+          rent_amount?: number
+          special_conditions?: string | null
+          start_date?: string
+          status?: string
+          tenant_id?: string
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string | null
+          expense_date: string
+          id: string
+          owner_id: string
+          property_id: string
+          receipt_url: string | null
+          recurrence_type: string | null
+          unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          description?: string | null
+          expense_date: string
+          id?: string
+          owner_id: string
+          property_id: string
+          receipt_url?: string | null
+          recurrence_type?: string | null
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          id?: string
+          owner_id?: string
+          property_id?: string
+          receipt_url?: string | null
+          recurrence_type?: string | null
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_allocations: {
+        Row: {
+          amount_allocated: number
+          charge_id: string
+          created_at: string
+          id: string
+          owner_id: string
+          payment_id: string
+        }
+        Insert: {
+          amount_allocated: number
+          charge_id: string
+          created_at?: string
+          id?: string
+          owner_id: string
+          payment_id: string
+        }
+        Update: {
+          amount_allocated?: number
+          charge_id?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocations_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          owner_id: string
+          payment_date: string
+          payment_method: string
+          proof_url: string | null
+          status: string
+          tenant_id: string | null
+          unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          payment_date: string
+          payment_method?: string
+          proof_url?: string | null
+          status?: string
+          tenant_id?: string | null
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          payment_date?: string
+          payment_method?: string
+          proof_url?: string | null
+          status?: string
+          tenant_id?: string | null
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          property_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          property_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          property_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          document_number: string | null
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          owner_id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_number?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_number?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      units: {
+        Row: {
+          created_at: string
+          due_day: number
+          id: string
+          name: string
+          owner_id: string
+          property_id: string
+          status: string
+          unit_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          due_day?: number
+          id?: string
+          name: string
+          owner_id: string
+          property_id: string
+          status?: string
+          unit_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          due_day?: number
+          id?: string
+          name?: string
+          owner_id?: string
+          property_id?: string
+          status?: string
+          unit_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      recalc_charge_status: { Args: { _charge_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
