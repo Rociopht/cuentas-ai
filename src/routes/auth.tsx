@@ -41,7 +41,7 @@ function AuthPage() {
     setLoading(true);
     const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const demoEmail = `demo-${stamp}@cuentas.ai`;
-    const demoPass = `Demo!${stamp}${Math.random().toString(36).slice(2, 6)}`;
+    const demoPass = `Zx9$${stamp}${crypto.randomUUID().slice(0, 8)}Q!`;
     const { error } = await supabase.auth.signUp({
       email: demoEmail,
       password: demoPass,
@@ -51,6 +51,10 @@ function AuthPage() {
       toast.error(error.message);
       setLoading(false);
       return;
+    }
+    // Auto sign-in in case session isn't returned on signup
+    if (!(await supabase.auth.getSession()).data.session) {
+      await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPass });
     }
     toast.success("Cuenta demo lista. Datos precargados.");
     navigate({ to: "/dashboard" });
