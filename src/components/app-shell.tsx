@@ -1,21 +1,22 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Home, Building2, Wallet, Inbox, Receipt, LineChart, MoreHorizontal, LogOut, Activity } from "lucide-react";
+import { Home, Building2, Wallet, CalendarDays, MessageSquare, Receipt, LineChart, MoreHorizontal, LogOut, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
 
 const NAV = [
   { to: "/dashboard", icon: Home, label: "Inicio" },
+  { to: "/calendar", icon: CalendarDays, label: "Calendario" },
   { to: "/properties", icon: Building2, label: "Propiedades" },
   { to: "/charges", icon: Wallet, label: "Cobros" },
-  { to: "/payments", icon: Inbox, label: "Pagos por revisar" },
+  { to: "/communications", icon: MessageSquare, label: "Comunicaciones" },
   { to: "/expenses", icon: Receipt, label: "Gastos" },
   { to: "/profitability", icon: LineChart, label: "Rentabilidad" },
   { to: "/activity", icon: Activity, label: "Actividad" },
 ] as const;
 
-const MOBILE_NAV = NAV.slice(0, 4);
+const MOBILE_NAV = [NAV[0], NAV[1], NAV[3], NAV[4]] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });

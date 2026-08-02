@@ -186,10 +186,13 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          amount_confirmed: boolean
           category: string
           created_at: string
           description: string | null
+          due_day: number | null
           expense_date: string
+          expense_type: string
           id: string
           owner_id: string
           property_id: string
@@ -200,10 +203,13 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_confirmed?: boolean
           category: string
           created_at?: string
           description?: string | null
+          due_day?: number | null
           expense_date: string
+          expense_type?: string
           id?: string
           owner_id: string
           property_id: string
@@ -214,10 +220,13 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_confirmed?: boolean
           category?: string
           created_at?: string
           description?: string | null
+          due_day?: number | null
           expense_date?: string
+          expense_type?: string
           id?: string
           owner_id?: string
           property_id?: string
@@ -493,6 +502,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_monthly_fixed_expenses: { Args: never; Returns: number }
       recalc_charge_status: { Args: { _charge_id: string }; Returns: undefined }
     }
     Enums: {

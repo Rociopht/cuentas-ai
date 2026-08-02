@@ -5,11 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/format";
-import { Plus, Receipt } from "lucide-react";
-import { useState } from "react";
+import { Plus, Receipt, Wrench, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const CATEGORIES = [
@@ -23,24 +24,58 @@ const CATEGORIES = [
   { v: "other", l: "Otros" },
 ];
 
+const TYPES = [
+  { v: "fijo_recurrente", l: "Fijo recurrente" },
+  { v: "variable", l: "Variable" },
+  { v: "reparacion", l: "Reparación / imprevisto" },
+];
+
+function catLabel(c: string) {
+  return CATEGORIES.find((x) => x.v === c)?.l ?? c;
+}
+
 export const Route = createFileRoute("/_authenticated/expenses")({
   component: Expenses,
+  head: () => ({
+    meta: [
+      { title: "Gastos fijos, variables e imprevistos · Cuentas AI" },
+      { name: "description", content: "Controla tus gastos separados por tipo: fijos recurrentes con día de vencimiento, variables con variación mensual y reparaciones imprevistas." },
+      { property: "og:title", content: "Gastos fijos, variables e imprevistos · Cuentas AI" },
+      { property: "og:description", content: "Distingue lo normal de lo imprevisto y confirma cada mes tus gastos fijos en un clic." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
 });
+
+type Exp = {
+  id: string; category: string; amount: number; expense_date: string; description: string | null;
+  expense_type: string; due_day: number | null; amount_confirmed: boolean;
+  property: { name: string } | null; unit: { name: string } | null;
+};
 
 function Expenses() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ property_id: "", unit_id: "", category: "maintenance", amount: "", description: "", expense_date: new Date().toISOString().slice(0, 10) });
+  const [confirmTarget, setConfirmTarget] = useState<Exp | null>(null);
+  const [confirmAmount, setConfirmAmount] = useState("");
+  const [form, setForm] = useState({ expense_type: "variable", due_day: "1", property_id: "", unit_id: "", category: "maintenance", amount: "", description: "", expense_date: new Date().toISOString().slice(0, 10) });
+
+  useEffect(() => {
+    supabase.rpc("ensure_monthly_fixed_expenses").then(({ data: n }) => {
+      if (n && n > 0) qc.invalidateQueries({ queryKey: ["expenses-page"] });
+    });
+  }, [qc]);
 
   const { data } = useQuery({
     queryKey: ["expenses-page"],
     queryFn: async () => {
       const [exp, props, units] = await Promise.all([
-        supabase.from("expenses").select("*, property:properties(name), unit:units(name)").order("expense_date", { ascending: false }).limit(120),
+        supabase.from("expenses").select("id, category, amount, expense_date, description, expense_type, due_day, amount_confirmed, property:properties(name), unit:units(name)").order("expense_date", { ascending: false }).limit(300),
         supabase.from("properties").select("id, name").order("name"),
         supabase.from("units").select("id, name, property_id").order("name"),
       ]);
-      return { expenses: exp.data ?? [], properties: props.data ?? [], units: units.data ?? [] };
+      return { expenses: (exp.data ?? []) as unknown as Exp[], properties: props.data ?? [], units: units.data ?? [] };
     },
   });
 
@@ -55,29 +90,82 @@ function Expenses() {
       amount: Number(form.amount),
       description: form.description || null,
       expense_date: form.expense_date,
+      expense_type: form.expense_type,
+      due_day: form.expense_type === "fijo_recurrente" ? Number(form.due_day) : null,
+      recurrence_type: form.expense_type === "fijo_recurrente" ? "monthly" : null,
+      amount_confirmed: true,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Gasto registrado");
     setOpen(false);
-    setForm({ property_id: "", unit_id: "", category: "maintenance", amount: "", description: "", expense_date: new Date().toISOString().slice(0, 10) });
+    setForm({ expense_type: "variable", due_day: "1", property_id: "", unit_id: "", category: "maintenance", amount: "", description: "", expense_date: new Date().toISOString().slice(0, 10) });
     qc.invalidateQueries();
   }
 
-  const total = (data?.expenses ?? []).reduce((s, e) => s + Number(e.amount), 0);
+  async function saveConfirm() {
+    if (!confirmTarget) return;
+    const amount = Number(confirmAmount);
+    if (!(amount > 0)) { toast.error("Monto inválido"); return; }
+    const { error } = await supabase.from("expenses").update({ amount, amount_confirmed: true }).eq("id", confirmTarget.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Monto confirmado");
+    setConfirmTarget(null);
+    qc.invalidateQueries();
+  }
+
+  const all = data?.expenses ?? [];
+  const now = new Date();
+  const inMonth = (e: Exp, offset: number) => {
+    const d = new Date(e.expense_date + "T00:00:00");
+    const ref = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
+  };
+
+  const fixed = all.filter((e) => e.expense_type === "fijo_recurrente");
+  const fixedThisMonth = fixed.filter((e) => inMonth(e, 0));
+  const variables = all.filter((e) => e.expense_type === "variable");
+  const repairs = all.filter((e) => e.expense_type === "reparacion");
+
+  const varThis = variables.filter((e) => inMonth(e, 0));
+  const varPrev = variables.filter((e) => inMonth(e, 1));
+  const byCat = (rows: Exp[]) => {
+    const m = new Map<string, number>();
+    for (const r of rows) m.set(r.category, (m.get(r.category) ?? 0) + Number(r.amount));
+    return m;
+  };
+  const catThis = byCat(varThis);
+  const catPrev = byCat(varPrev);
+  const prevMonthName = new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString("es-PE", { month: "long" });
+
+  const typicalMonthly = [...fixedThisMonth, ...varThis].reduce((s, e) => s + Number(e.amount), 0);
+  const repairsThis = repairs.filter((e) => inMonth(e, 0)).reduce((s, e) => s + Number(e.amount), 0);
   const propUnits = data?.units.filter((u) => u.property_id === form.property_id) ?? [];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Gastos</h1>
-          <p className="text-muted-foreground">Todo lo que sale de tu bolsillo, por propiedad o unidad.</p>
+          <p className="text-muted-foreground">Lo fijo, lo variable y lo imprevisto, separados para leer bien tu rentabilidad.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Registrar gasto</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Nuevo gasto</DialogTitle></DialogHeader>
             <div className="space-y-3">
+              <div>
+                <Label>Tipo de gasto</Label>
+                <Select value={form.expense_type} onValueChange={(v) => setForm({ ...form, expense_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{TYPES.map((t) => <SelectItem key={t.v} value={t.v}>{t.l}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              {form.expense_type === "fijo_recurrente" && (
+                <div>
+                  <Label>Día de vencimiento (cada mes)</Label>
+                  <Input type="number" min={1} max={28} value={form.due_day} onChange={(e) => setForm({ ...form, due_day: e.target.value })} />
+                </div>
+              )}
               <div>
                 <Label>Propiedad</Label>
                 <Select value={form.property_id} onValueChange={(v) => setForm({ ...form, property_id: v, unit_id: "" })}>
@@ -116,28 +204,107 @@ function Expenses() {
         </Dialog>
       </header>
 
-      <Card className="p-5">
-        <div className="text-xs uppercase text-muted-foreground">Total registrado (recientes)</div>
-        <div className="mt-1 text-3xl font-semibold text-destructive">{formatMoney(total)}</div>
-      </Card>
-
-      <div className="space-y-2">
-        {(data?.expenses ?? []).map((e) => (
-          <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
-            <div className="min-w-0">
-              <div className="truncate font-medium">{e.description ?? CATEGORIES.find((c) => c.v === e.category)?.l ?? e.category}</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · {new Date(e.expense_date).toLocaleDateString("es-PE")}</div>
-            </div>
-            <div className="text-right font-semibold text-destructive">{formatMoney(Number(e.amount))}</div>
-          </Card>
-        ))}
-        {data && data.expenses.length === 0 && (
-          <Card className="p-10 text-center">
-            <Receipt className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 text-muted-foreground">No hay gastos registrados.</p>
-          </Card>
-        )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card className="p-5">
+          <div className="text-xs uppercase text-muted-foreground">Gasto típico de este mes</div>
+          <div className="mt-1 text-3xl font-semibold text-destructive">{formatMoney(typicalMonthly)}</div>
+          <p className="mt-1 text-xs text-muted-foreground">Fijos + variables. No incluye reparaciones.</p>
+        </Card>
+        <Card className="border-l-4 border-l-rust p-5">
+          <div className="text-xs uppercase text-muted-foreground">Imprevistos del mes</div>
+          <div className="mt-1 text-3xl font-semibold text-rust">{formatMoney(repairsThis)}</div>
+          <p className="mt-1 text-xs text-muted-foreground">Reparaciones, fuera del promedio típico.</p>
+        </Card>
       </div>
+
+      <section>
+        <h2 className="mb-2 flex items-center gap-2 font-medium"><RefreshCw className="h-4 w-4 text-primary" /> Fijos recurrentes</h2>
+        <div className="space-y-2">
+          {fixedThisMonth.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Aún no registras gastos fijos este mes.</Card>}
+          {fixedThisMonth.map((e) => (
+            <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{e.description ?? catLabel(e.category)}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · vence el {e.due_day ?? new Date(e.expense_date + "T00:00:00").getDate()} de cada mes</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div className="font-semibold text-destructive">{formatMoney(Number(e.amount))}</div>
+                  {!e.amount_confirmed && <Badge className="mt-1 bg-warning/15 text-warning-foreground border border-warning/30">Por confirmar</Badge>}
+                </div>
+                <Button size="sm" variant="outline" onClick={() => { setConfirmTarget(e); setConfirmAmount(String(e.amount)); }}>
+                  Confirmar monto
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 flex items-center gap-2 font-medium"><Receipt className="h-4 w-4 text-muted-foreground" /> Variables</h2>
+        {catThis.size > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {Array.from(catThis.entries()).map(([cat, amount]) => {
+              const prev = catPrev.get(cat) ?? 0;
+              const pct = prev > 0 ? Math.round(((amount - prev) / prev) * 100) : null;
+              const up = (pct ?? 0) > 0;
+              return (
+                <Badge key={cat} className="bg-muted text-muted-foreground">
+                  {catLabel(cat)}: {formatMoney(amount)}
+                  {pct !== null && (
+                    <span className={"ml-1 inline-flex items-center gap-0.5 " + (up ? "text-destructive" : "text-success")}>
+                      {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {pct > 0 ? "+" : ""}{pct}% vs. {prevMonthName}
+                    </span>
+                  )}
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+        <div className="space-y-2">
+          {variables.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin gastos variables registrados.</Card>}
+          {variables.slice(0, 40).map((e) => (
+            <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{e.description ?? catLabel(e.category)}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · {new Date(e.expense_date + "T00:00:00").toLocaleDateString("es-PE")}</div>
+              </div>
+              <div className="text-right font-semibold text-destructive">{formatMoney(Number(e.amount))}</div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 flex items-center gap-2 font-medium"><Wrench className="h-4 w-4 text-rust" /> Reparaciones / imprevistos</h2>
+        <p className="mb-2 text-xs text-muted-foreground">Estos gastos no cuentan para el promedio mensual típico en Rentabilidad.</p>
+        <div className="space-y-2">
+          {repairs.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin imprevistos registrados. Ojalá siga así.</Card>}
+          {repairs.slice(0, 40).map((e) => (
+            <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-l-4 border-l-rust p-4">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{e.description ?? catLabel(e.category)}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · {new Date(e.expense_date + "T00:00:00").toLocaleDateString("es-PE")}</div>
+              </div>
+              <div className="text-right font-semibold text-rust">{formatMoney(Number(e.amount))}</div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <Dialog open={!!confirmTarget} onOpenChange={(o) => !o && setConfirmTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Confirmar monto de este mes</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">{confirmTarget?.description ?? catLabel(confirmTarget?.category ?? "")}</p>
+            <Label>Monto real</Label>
+            <Input type="number" step="0.01" value={confirmAmount} onChange={(e) => setConfirmAmount(e.target.value)} />
+          </div>
+          <DialogFooter><Button onClick={saveConfirm}>Guardar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
