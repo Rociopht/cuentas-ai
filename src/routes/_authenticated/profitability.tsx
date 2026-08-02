@@ -59,6 +59,12 @@ function Profitability() {
         <h1 className="text-2xl font-semibold tracking-tight">Rentabilidad</h1>
         <p className="text-muted-foreground">Ingresos cobrados menos gastos pagados. Cifras reales.</p>
       </header>
+      <Card className="border-l-4 border-l-rust p-4 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-muted-foreground">Reparaciones e imprevistos (excluidos del cálculo típico)</span>
+          <span className="font-semibold text-rust">{formatMoney(data.repairsTotal)}</span>
+        </div>
+      </Card>
       <Card className="p-6">
         <div className="text-xs uppercase text-muted-foreground">Resultado acumulado</div>
         <div className={"mt-1 text-4xl font-semibold " + (totalResult >= 0 ? "text-success" : "text-destructive")}>{formatMoney(totalResult)}</div>
