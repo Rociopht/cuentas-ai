@@ -18,7 +18,7 @@ function Profitability() {
         supabase.from("units").select("id, name, property_id"),
         supabase.from("charges").select("id, unit_id"),
         supabase.from("payment_allocations").select("charge_id, amount_allocated"),
-        supabase.from("expenses").select("amount, property_id, unit_id"),
+        supabase.from("expenses").select("amount, property_id, unit_id, expense_type"),
       ]);
       const chargeById = new Map((charges.data ?? []).map((c) => [c.id, c]));
       const unitById = new Map((units.data ?? []).map((u) => [u.id, u]));
@@ -31,7 +31,9 @@ function Profitability() {
         const c = chargeById.get(a.charge_id); if (!c) continue;
         const u = perUnit.get(c.unit_id); if (u) u.collected += Number(a.amount_allocated);
       }
-      for (const e of expenses.data ?? []) if (e.unit_id) { const u = perUnit.get(e.unit_id); if (u) u.spent += Number(e.amount); }
+      const typical = (expenses.data ?? []).filter((e) => e.expense_type !== "reparacion");
+      const repairs = (expenses.data ?? []).filter((e) => e.expense_type === "reparacion");
+      for (const e of typical) if (e.unit_id) { const u = perUnit.get(e.unit_id); if (u) u.spent += Number(e.amount); }
       const perProperty = new Map<string, { id: string; name: string; collected: number; spent: number }>();
       for (const p of props.data ?? []) perProperty.set(p.id, { id: p.id, name: p.name, collected: 0, spent: 0 });
       for (const [, u] of perUnit) {
@@ -39,10 +41,10 @@ function Profitability() {
         const pp = propId ? perProperty.get(propId) : undefined;
         if (pp) { pp.collected += u.collected; pp.spent += u.spent; }
       }
-      for (const e of expenses.data ?? []) if (!e.unit_id) { const pp = perProperty.get(e.property_id); if (pp) pp.spent += Number(e.amount); }
+      for (const e of typical) if (!e.unit_id) { const pp = perProperty.get(e.property_id); if (pp) pp.spent += Number(e.amount); }
       const properties = Array.from(perProperty.values()).map((p) => ({ ...p, result: p.collected - p.spent })).sort((a, b) => b.result - a.result);
       const unitsList = Array.from(perUnit.values()).map((u) => ({ ...u, result: u.collected - u.spent })).sort((a, b) => b.result - a.result);
-      return { properties, units: unitsList };
+      return { properties, units: unitsList, repairsTotal: repairs.reduce((s, e) => s + Number(e.amount), 0) };
     },
   });
 
