@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchDashboard } from "@/lib/queries";
+import { fetchMonthSchedule, daysUntil } from "@/lib/schedule";
 import { formatMoney } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, Building2, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
+import { ArrowRight, Building2, TrendingUp, TrendingDown, Sparkles, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
@@ -29,6 +30,29 @@ function Dashboard() {
     queryKey: ["dashboard", period.year, period.month],
     queryFn: () => fetchDashboard(period.year, period.month),
   });
+
+  const { data: sched } = useQuery({
+    queryKey: ["schedule", period.year, period.month],
+    queryFn: () => fetchMonthSchedule(period.year, period.month),
+  });
+
+  const next7 = (() => {
+    if (!sched) return null;
+    const charges = sched.charges.filter((c) => {
+      const d = daysUntil(period.year, period.month, c.day);
+      return c.status !== "paid" && d >= 0 && d <= 7;
+    });
+    const expenses = sched.expenses.filter((e) => {
+      const d = daysUntil(period.year, period.month, e.day);
+      return d >= 0 && d <= 7;
+    });
+    return {
+      charges,
+      expenses,
+      toCollect: charges.reduce((s, c) => s + Math.max(c.expected - c.paid, 0), 0),
+      toPay: expenses.reduce((s, e) => s + e.amount, 0),
+    };
+  })();
 
   const greeting = greet();
   const monthName = new Date(period.year, period.month - 1, 1).toLocaleDateString("es-PE", { month: "long", year: "numeric" });
@@ -65,6 +89,23 @@ function Dashboard() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
+        <Card className="p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <span className="text-xs font-medium uppercase tracking-wide">Próximos 7 días</span>
+          </div>
+          {!next7 ? (
+            <Skeleton className="h-16 w-full" />
+          ) : (
+            <div className="space-y-1.5 text-sm">
+              <div className="flex items-center justify-between"><span className="text-muted-foreground">Cobros por vencer</span><span className="font-semibold">{next7.charges.length}</span></div>
+              <div className="flex items-center justify-between"><span className="text-muted-foreground">Por cobrar</span><span className="font-semibold text-success">{formatMoney(next7.toCollect)}</span></div>
+              <div className="flex items-center justify-between"><span className="text-muted-foreground">Gastos fijos que vencen</span><span className="font-semibold text-rust">{formatMoney(next7.toPay)}</span></div>
+            </div>
+          )}
+          <Button asChild variant="ghost" size="sm" className="mt-3 px-0"><Link to="/calendar">Ver calendario completo <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
+        </Card>
+
         <Card className="p-5 md:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-medium">Requiere tu atención</h2>
@@ -74,7 +115,7 @@ function Dashboard() {
           ) : (
             <div className="divide-y">
               <AttentionRow to="/charges" count={data?.counts.overdue ?? 0} label="cobros vencidos" tone="destructive" />
-              <AttentionRow to="/payments" count={data?.counts.review ?? 0} label="pagos por revisar" tone="warning" />
+              <AttentionRow to="/charges" count={data?.counts.review ?? 0} label="pagos por revisar" tone="warning" />
               <AttentionRow to="/charges" count={data?.counts.partial ?? 0} label="pagos parciales" tone="warning" />
               <AttentionRow to="/properties" count={data?.counts.expiring ?? 0} label="contratos por vencer (30 días)" tone="muted" />
               {data && data.counts.overdue === 0 && data.counts.review === 0 && data.counts.partial === 0 && data.counts.expiring === 0 && (
@@ -84,7 +125,7 @@ function Dashboard() {
           )}
         </Card>
 
-        <Card className="border-accent/40 bg-accent/30 p-5">
+        <Card className="border-accent/40 bg-accent/30 p-5 md:col-span-3">
           <div className="mb-3 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-xs font-medium uppercase tracking-wide">Insight de Cuentas AI</span>
@@ -129,10 +170,10 @@ function Dashboard() {
       <section>
         <h2 className="mb-3 font-medium">Acciones rápidas</h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/payments">Registrar pago</Link></Button>
+          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/charges">Registrar pago</Link></Button>
           <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/expenses">Registrar gasto</Link></Button>
           <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/properties">Agregar unidad</Link></Button>
-          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/payments">Revisar pagos</Link></Button>
+          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/communications">Comunicaciones</Link></Button>
         </div>
       </section>
     </div>
