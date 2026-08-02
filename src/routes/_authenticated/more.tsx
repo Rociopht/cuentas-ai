@@ -2,13 +2,15 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Receipt, LineChart, Activity as ActivityIcon, LogOut, ChevronRight } from "lucide-react";
+import { Receipt, LineChart, Activity as ActivityIcon, LogOut, ChevronRight, Building2, MessageSquare } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/more")({
   component: More,
 });
 
 const ITEMS = [
+  { to: "/properties", icon: Building2, label: "Propiedades" },
+  { to: "/communications", icon: MessageSquare, label: "Comunicaciones" },
   { to: "/expenses", icon: Receipt, label: "Gastos" },
   { to: "/profitability", icon: LineChart, label: "Rentabilidad" },
   { to: "/activity", icon: ActivityIcon, label: "Actividad" },
