@@ -18,6 +18,7 @@ import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedMoreRouteImport } from './routes/_authenticated/more'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCommunicationsRouteImport } from './routes/_authenticated/communications'
 import { Route as AuthenticatedChargesRouteImport } from './routes/_authenticated/charges'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated/activity'
@@ -68,6 +69,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCommunicationsRoute =
+  AuthenticatedCommunicationsRouteImport.update({
+    id: '/communications',
+    path: '/communications',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedChargesRoute = AuthenticatedChargesRouteImport.update({
   id: '/charges',
   path: '/charges',
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/activity': typeof AuthenticatedActivityRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/charges': typeof AuthenticatedChargesRoute
+  '/communications': typeof AuthenticatedCommunicationsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/more': typeof AuthenticatedMoreRoute
@@ -110,6 +118,7 @@ export interface FileRoutesByTo {
   '/activity': typeof AuthenticatedActivityRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/charges': typeof AuthenticatedChargesRoute
+  '/communications': typeof AuthenticatedCommunicationsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/more': typeof AuthenticatedMoreRoute
@@ -126,6 +135,7 @@ export interface FileRoutesById {
   '/_authenticated/activity': typeof AuthenticatedActivityRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/charges': typeof AuthenticatedChargesRoute
+  '/_authenticated/communications': typeof AuthenticatedCommunicationsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/more': typeof AuthenticatedMoreRoute
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/calendar'
     | '/charges'
+    | '/communications'
     | '/dashboard'
     | '/expenses'
     | '/more'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/calendar'
     | '/charges'
+    | '/communications'
     | '/dashboard'
     | '/expenses'
     | '/more'
@@ -171,6 +183,7 @@ export interface FileRouteTypes {
     | '/_authenticated/activity'
     | '/_authenticated/calendar'
     | '/_authenticated/charges'
+    | '/_authenticated/communications'
     | '/_authenticated/dashboard'
     | '/_authenticated/expenses'
     | '/_authenticated/more'
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/communications': {
+      id: '/_authenticated/communications'
+      path: '/communications'
+      fullPath: '/communications'
+      preLoaderRoute: typeof AuthenticatedCommunicationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/charges': {
       id: '/_authenticated/charges'
       path: '/charges'
@@ -300,6 +320,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedChargesRoute: typeof AuthenticatedChargesRoute
+  AuthenticatedCommunicationsRoute: typeof AuthenticatedCommunicationsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedMoreRoute: typeof AuthenticatedMoreRoute
@@ -312,6 +333,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedActivityRoute: AuthenticatedActivityRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedChargesRoute: AuthenticatedChargesRoute,
+  AuthenticatedCommunicationsRoute: AuthenticatedCommunicationsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedMoreRoute: AuthenticatedMoreRoute,
