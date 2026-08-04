@@ -115,6 +115,7 @@ export const TONE_DOT: Record<DayTone, string> = {
 
 export type CommTarget = {
   chargeId: string;
+  tenantId: string | null;
   tenant: string;
   phone: string | null;
   unit: string;
@@ -130,7 +131,7 @@ export async function fetchCommTargets(): Promise<CommTarget[]> {
   const [cRes, aRes] = await Promise.all([
     supabase
       .from("charges")
-      .select("id, due_date, amount_expected, status, unit:units(name, property:properties(name)), tenant:tenants(full_name, phone)")
+      .select("id, due_date, amount_expected, status, tenant_id, unit:units(name, property:properties(name)), tenant:tenants(full_name, phone)")
       .in("status", ["pending", "partial", "overdue"])
       .order("due_date"),
     supabase.from("payment_allocations").select("charge_id, amount_allocated"),
@@ -147,6 +148,7 @@ export async function fetchCommTargets(): Promise<CommTarget[]> {
       const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
       return {
         chargeId: c.id,
+        tenantId: c.tenant_id ?? null,
         tenant: c.tenant?.full_name ?? "Inquilino",
         phone: c.tenant?.phone ?? null,
         unit: c.unit?.name ?? "—",
