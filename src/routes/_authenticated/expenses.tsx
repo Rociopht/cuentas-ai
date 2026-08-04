@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/format";
 import { Plus, Receipt, Wrench, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
+import { fetchMonthlySeries } from "@/lib/analytics";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -141,6 +143,18 @@ function Expenses() {
   const repairsThis = repairs.filter((e) => inMonth(e, 0)).reduce((s, e) => s + Number(e.amount), 0);
   const propUnits = data?.units.filter((u) => u.property_id === form.property_id) ?? [];
 
+  const { data: series } = useQuery({ queryKey: ["monthly-series"], queryFn: () => fetchMonthlySeries(6) });
+  const trend = (series ?? []).map((p) => ({ label: p.label, Fijos: Math.round(p.fixed), Variables: Math.round(p.variable), Imprevistos: Math.round(p.repairs) }));
+  const catBars = Array.from(catThis.entries())
+    .map(([cat, amount]) => ({ cat: catLabel(cat), "Este mes": Math.round(amount), [`Mes anterior`]: Math.round(catPrev.get(cat) ?? 0) }))
+    .sort((a, b) => b["Este mes"] - a["Este mes"])
+    .slice(0, 6);
+  const biggest = catBars[0];
+  const worst = Array.from(catThis.entries())
+    .map(([cat, amount]) => { const prev = catPrev.get(cat) ?? 0; return { cat: catLabel(cat), pct: prev > 0 ? Math.round(((amount - prev) / prev) * 100) : null }; })
+    .filter((x) => x.pct !== null)
+    .sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0))[0];
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -214,6 +228,50 @@ function Expenses() {
           <div className="text-xs uppercase text-muted-foreground">Imprevistos del mes</div>
           <div className="mt-1 text-3xl font-semibold text-rust">{formatMoney(repairsThis)}</div>
           <p className="mt-1 text-xs text-muted-foreground">Reparaciones, fuera del promedio típico.</p>
+        </Card>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Card className="p-5">
+          <div className="text-xs uppercase text-muted-foreground">En qué se va tu plata · últimos 6 meses</div>
+          <div className="mt-3 h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={trend}>
+                <CartesianGrid vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
+                <YAxis tickLine={false} axisLine={false} fontSize={11} width={48} tickFormatter={(v: number) => "S/" + Math.round(v / 1000) + "k"} />
+                <Tooltip formatter={(v: number) => formatMoney(v)} />
+                <Legend />
+                <Bar dataKey="Fijos" stackId="a" fill="var(--primary)" />
+                <Bar dataKey="Variables" stackId="a" fill="var(--muted-foreground)" opacity={0.5} />
+                <Bar dataKey="Imprevistos" stackId="a" fill="var(--rust)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="text-xs uppercase text-muted-foreground">Variables por categoría vs. {prevMonthName}</div>
+          <div className="mt-3 h-56">
+            {catBars.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Sin gastos variables este mes.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={catBars} layout="vertical">
+                  <CartesianGrid horizontal={false} stroke="var(--border)" />
+                  <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v: number) => "S/" + v} />
+                  <YAxis type="category" dataKey="cat" tickLine={false} axisLine={false} fontSize={11} width={92} />
+                  <Tooltip formatter={(v: number) => formatMoney(v)} />
+                  <Legend />
+                  <Bar dataKey="Mes anterior" fill="var(--muted-foreground)" opacity={0.35} radius={3} />
+                  <Bar dataKey="Este mes" fill="var(--destructive)" radius={3} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {biggest ? <>Tu mayor gasto variable es <strong>{biggest.cat}</strong> ({formatMoney(biggest["Este mes"])}).</> : "Registra gastos variables para comparar."}
+            {worst?.pct ? <> Lo que más subió: <strong>{worst.cat}</strong> {worst.pct > 0 ? "+" : ""}{worst.pct}%.</> : null}
+          </p>
         </Card>
       </div>
 
