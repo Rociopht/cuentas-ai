@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertTriangle, Receipt } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import { fetchMonthSchedule, daysUntil } from "@/lib/schedule";
 
@@ -49,6 +49,20 @@ function CalendarView() {
   const dayCharges = (d: number) => data?.charges.filter((c) => c.day === d) ?? [];
   const dayExpenses = (d: number) => data?.expenses.filter((e) => e.day === d) ?? [];
 
+  const cs = data?.charges ?? [];
+  const es = data?.expenses ?? [];
+  const diffOf = (day: number) => daysUntil(cursor.year, cursor.month, day);
+  const cobrado = cs.filter((c) => c.status === "paid");
+  const atrasado = cs.filter((c) => c.status !== "paid" && diffOf(c.day) < 0);
+  const proximo = cs.filter((c) => c.status !== "paid" && diffOf(c.day) >= 0);
+  const sum = (arr: { expected: number; paid: number }[], field: "expected" | "paid") => arr.reduce((s, x) => s + x[field], 0);
+  const guide = [
+    { icon: CheckCircle2, cls: "bg-success", text: "text-success", title: "Ya te pagaron", count: cobrado.length, amount: sum(cobrado, "expected"), hint: "alquileres cobrados este mes" },
+    { icon: Clock, cls: "bg-warning", text: "text-warning-foreground", title: "Te pagan pronto", count: proximo.length, amount: sum(proximo, "expected") - sum(proximo, "paid"), hint: "cobros que aún no llegan a su fecha" },
+    { icon: AlertTriangle, cls: "bg-destructive", text: "text-destructive", title: "Te deben desde antes", count: atrasado.length, amount: sum(atrasado, "expected") - sum(atrasado, "paid"), hint: "ya pasó su fecha y no llegó el dinero" },
+    { icon: Receipt, cls: "bg-rust", text: "text-rust", title: "Tú tienes que pagar", count: es.length, amount: es.reduce((s, e) => s + e.amount, 0), hint: "luz, agua, internet y otros gastos fijos" },
+  ];
+
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -62,6 +76,24 @@ function CalendarView() {
           <Button variant="outline" size="icon" onClick={() => move(1)}><ChevronRight className="h-4 w-4" /></Button>
         </div>
       </header>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {guide.map((g) => (
+          <Card key={g.title} className="p-4">
+            <div className="flex items-center gap-2">
+              <span className={"h-2.5 w-2.5 rounded-full " + g.cls} />
+              <g.icon className={"h-4 w-4 " + g.text} />
+              <span className="text-sm font-medium">{g.title}</span>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-xl font-semibold">{formatMoney(g.amount)}</span>
+              <span className="text-xs text-muted-foreground">{g.count} {g.count === 1 ? "caso" : "casos"}</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{g.hint}</p>
+          </Card>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">Los puntos de cada día usan estos mismos colores. Toca un día para ver el detalle.</p>
 
       <Card className="p-3 md:p-5">
         <div className="mb-2 grid grid-cols-7 text-center text-[11px] uppercase text-muted-foreground">
@@ -99,12 +131,6 @@ function CalendarView() {
             );
           })}
         </div>
-        <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-          <Legend cls="bg-success" label="Pagado" />
-          <Legend cls="bg-warning" label="Vence en ≤5 días" />
-          <Legend cls="bg-destructive" label="Vencido" />
-          <Legend cls="bg-rust" label="Gasto fijo" />
-        </div>
       </Card>
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
@@ -116,9 +142,9 @@ function CalendarView() {
           </SheetHeader>
           <div className="mt-4 space-y-4 px-4 pb-6">
             <section>
-              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Cobros</h3>
+              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Dinero que debes recibir</h3>
               <div className="space-y-2">
-                {selected && dayCharges(selected).length === 0 && <p className="text-sm text-muted-foreground">Ningún cobro vence este día.</p>}
+                {selected && dayCharges(selected).length === 0 && <p className="text-sm text-muted-foreground">Nadie te tiene que pagar este día.</p>}
                 {selected && dayCharges(selected).map((c) => (
                   <Card key={c.id} className="p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -127,7 +153,7 @@ function CalendarView() {
                         <div className="text-xs text-muted-foreground">{c.tenant}</div>
                       </div>
                       <Badge className={c.status === "paid" ? "bg-success/15 text-success border border-success/30" : c.status === "overdue" ? "bg-destructive/10 text-destructive border border-destructive/30" : "bg-warning/15 text-warning-foreground border border-warning/30"}>
-                        {c.status === "paid" ? "Pagado" : c.status === "overdue" ? "Vencido" : c.status === "partial" ? "Parcial" : "Por cobrar"}
+                        {c.status === "paid" ? "Ya te pagó" : c.status === "overdue" ? "Te debe" : c.status === "partial" ? "Pagó una parte" : "Te paga pronto"}
                       </Badge>
                     </div>
                     <div className="mt-2 text-sm">
@@ -139,9 +165,9 @@ function CalendarView() {
               </div>
             </section>
             <section>
-              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Gastos fijos</h3>
+              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Dinero que tú debes pagar</h3>
               <div className="space-y-2">
-                {selected && dayExpenses(selected).length === 0 && <p className="text-sm text-muted-foreground">Ningún gasto fijo vence este día.</p>}
+                {selected && dayExpenses(selected).length === 0 && <p className="text-sm text-muted-foreground">No tienes gastos fijos este día.</p>}
                 {selected && dayExpenses(selected).map((e) => (
                   <Card key={e.id} className="border-l-4 border-l-rust p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -160,14 +186,5 @@ function CalendarView() {
         </SheetContent>
       </Sheet>
     </div>
-  );
-}
-
-function Legend({ cls, label }: { cls: string; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={"h-2 w-2 rounded-full " + cls} />
-      {label}
-    </span>
   );
 }

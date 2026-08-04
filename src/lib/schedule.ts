@@ -115,6 +115,7 @@ export const TONE_DOT: Record<DayTone, string> = {
 
 export type CommTarget = {
   chargeId: string;
+  tenantId: string | null;
   tenant: string;
   phone: string | null;
   unit: string;
@@ -130,7 +131,7 @@ export async function fetchCommTargets(): Promise<CommTarget[]> {
   const [cRes, aRes] = await Promise.all([
     supabase
       .from("charges")
-      .select("id, due_date, amount_expected, status, unit:units(name, property:properties(name)), tenant:tenants(full_name, phone)")
+      .select("id, due_date, amount_expected, status, tenant_id, unit:units(name, property:properties(name)), tenant:tenants(full_name, phone)")
       .in("status", ["pending", "partial", "overdue"])
       .order("due_date"),
     supabase.from("payment_allocations").select("charge_id, amount_allocated"),
@@ -147,6 +148,7 @@ export async function fetchCommTargets(): Promise<CommTarget[]> {
       const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
       return {
         chargeId: c.id,
+        tenantId: c.tenant_id ?? null,
         tenant: c.tenant?.full_name ?? "Inquilino",
         phone: c.tenant?.phone ?? null,
         unit: c.unit?.name ?? "—",
@@ -170,4 +172,34 @@ export function draftMessage(t: CommTarget): string {
   }
   const cuando = t.daysToDue === 0 ? "vence hoy" : `vence en ${t.daysToDue} ${t.daysToDue === 1 ? "día" : "días"}`;
   return `Hola ${t.tenant}, espero que estés muy bien. Solo un recordatorio amable: el alquiler de ${lugar} ${cuando} (${new Date(t.dueDate + "T00:00:00").toLocaleDateString("es-PE")}) por ${monto}. Si ya lo enviaste, avísame para registrarlo. ¡Gracias y buen día!`;
+}
+/* ---------- Historial de comunicaciones ---------- */
+
+export type CommEvent = {
+  id: string;
+  createdAt: string;
+  kind: "message_sent" | "comm_note";
+  description: string;
+  message: string | null;
+  tenantId: string | null;
+};
+
+export async function fetchCommHistory(): Promise<CommEvent[]> {
+  const { data } = await supabase
+    .from("activity_log")
+    .select("id, created_at, action_type, entity_id, entity_type, description, metadata")
+    .in("action_type", ["message_sent", "comm_note"])
+    .order("created_at", { ascending: false })
+    .limit(300);
+  return (data ?? []).map((r) => {
+    const meta = (r.metadata ?? {}) as Record<string, unknown>;
+    return {
+      id: r.id,
+      createdAt: r.created_at,
+      kind: r.action_type === "comm_note" ? "comm_note" : "message_sent",
+      description: r.description,
+      message: typeof meta["message"] === "string" ? (meta["message"] as string) : null,
+      tenantId: typeof meta["tenant_id"] === "string" ? (meta["tenant_id"] as string) : r.entity_type === "tenant" ? r.entity_id : null,
+    };
+  });
 }

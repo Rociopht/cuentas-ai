@@ -15,10 +15,10 @@ export function daysBetween(a: string | Date, b: string | Date = new Date()): nu
 }
 
 export const CHARGE_STATUS_LABEL: Record<string, string> = {
-  pending: "Pendiente",
-  partial: "Parcial",
-  paid: "Pagado",
-  overdue: "Vencido",
+  pending: "Te paga pronto",
+  partial: "Pagó una parte",
+  paid: "Ya te pagó",
+  overdue: "Te debe",
 };
 
 export const CHARGE_STATUS_COLOR: Record<string, string> = {
