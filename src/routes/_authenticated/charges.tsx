@@ -12,6 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatMoney, monthLabel, CHARGE_STATUS_COLOR, CHARGE_STATUS_LABEL } from "@/lib/format";
 import { CheckCircle2, Inbox, Plus } from "lucide-react";
+import { fetchMonthlySeries } from "@/lib/analytics";
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, Tooltip, CartesianGrid } from "recharts";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/charges")({
@@ -98,6 +101,21 @@ function Charges() {
   const paidList = data?.charges.filter((c) => c.status === "paid") ?? [];
   const unitCharges = data?.charges.filter((c) => c.unit_id === form.unit_id && c.status !== "paid") ?? [];
 
+  const { data: series } = useQuery({ queryKey: ["monthly-series"], queryFn: () => fetchMonthlySeries(6) });
+  const now = new Date();
+  const monthCharges = data?.charges.filter((c) => c.period_year === now.getFullYear() && c.period_month === now.getMonth() + 1) ?? [];
+  const expectedMonth = monthCharges.reduce((s, c) => s + Number(c.amount_expected), 0);
+  const collectedMonth = monthCharges.reduce((s, c) => s + c.paid, 0);
+  const overdueMonth = monthCharges.filter((c) => c.status === "overdue").reduce((s, c) => s + Math.max(Number(c.amount_expected) - c.paid, 0), 0);
+  const pendingMonth = Math.max(expectedMonth - collectedMonth - overdueMonth, 0);
+  const pct = expectedMonth > 0 ? Math.round((collectedMonth / expectedMonth) * 100) : 0;
+  const donut = [
+    { name: "Cobrado", value: collectedMonth, fill: "var(--success)" },
+    { name: "Por cobrar", value: pendingMonth, fill: "var(--warning)" },
+    { name: "Atrasado", value: overdueMonth, fill: "var(--destructive)" },
+  ].filter((d) => d.value > 0);
+  const bars = (series ?? []).map((p) => ({ label: p.label, Esperado: Math.round(p.expected), Cobrado: Math.round(p.collected) }));
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -154,10 +172,52 @@ function Charges() {
         </Dialog>
       </header>
 
+      <div className="grid gap-3 lg:grid-cols-3">
+        <Card className="p-5">
+          <div className="text-xs uppercase text-muted-foreground">Cobrado este mes</div>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-3xl font-semibold text-success">{pct}%</span>
+            <span className="text-sm text-muted-foreground">{formatMoney(collectedMonth)} de {formatMoney(expectedMonth)}</span>
+          </div>
+          <Progress value={pct} className="mt-3" />
+          <div className="mt-3 h-36">
+            {donut.length > 0 && (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={donut} dataKey="value" nameKey="name" innerRadius={38} outerRadius={62} paddingAngle={2} stroke="none">
+                    {donut.map((d) => <Cell key={d.name} fill={d.fill} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => formatMoney(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-success" />Cobrado</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-warning" />Por cobrar {formatMoney(pendingMonth)}</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive" />Atrasado {formatMoney(overdueMonth)}</span>
+          </div>
+        </Card>
+        <Card className="p-5 lg:col-span-2">
+          <div className="text-xs uppercase text-muted-foreground">Esperado vs. cobrado · últimos 6 meses</div>
+          <div className="mt-3 h-52">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={bars}>
+                <CartesianGrid vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
+                <Tooltip formatter={(v: number) => formatMoney(v)} />
+                <Bar dataKey="Esperado" fill="var(--muted-foreground)" opacity={0.35} radius={4} />
+                <Bar dataKey="Cobrado" fill="var(--primary)" radius={4} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
       <section>
-        <h2 className="mb-2 flex items-center gap-2 font-medium"><Inbox className="h-4 w-4 text-warning" /> Necesita tu revisión ({review.length})</h2>
+        <h2 className="mb-2 flex items-center gap-2 font-medium"><Inbox className="h-4 w-4 text-warning" /> Por revisar ({review.length})</h2>
         {review.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-muted-foreground">No hay pagos pendientes de conciliar.</Card>
+          <Card className="p-6 text-center text-sm text-muted-foreground">Nada por conciliar.</Card>
         ) : (
           <div className="space-y-2">
             {review.map((p) => (
@@ -182,15 +242,14 @@ function Charges() {
       </section>
 
       <section>
-        <h2 className="mb-2 font-medium">Estado de cobros del mes</h2>
         <Tabs defaultValue="overdue">
-          <TabsList>
-            <TabsTrigger value="overdue">Vencidos ({overdue.length})</TabsTrigger>
-            <TabsTrigger value="pending">Por cobrar ({pendingList.length})</TabsTrigger>
-            <TabsTrigger value="paid">Pagados ({paidList.length})</TabsTrigger>
+          <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="overdue"><span className="mr-1.5 h-2 w-2 rounded-full bg-destructive" />Te deben ({overdue.length})</TabsTrigger>
+            <TabsTrigger value="pending"><span className="mr-1.5 h-2 w-2 rounded-full bg-warning" />Pagan pronto ({pendingList.length})</TabsTrigger>
+            <TabsTrigger value="paid"><span className="mr-1.5 h-2 w-2 rounded-full bg-success" />Pagados ({paidList.length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="overdue"><ChargeList items={overdue} loading={isLoading} empty="Sin cobros vencidos. ¡Bien hecho!" /></TabsContent>
-          <TabsContent value="pending"><ChargeList items={pendingList} loading={isLoading} empty="No hay cobros pendientes." /></TabsContent>
+          <TabsContent value="overdue"><ChargeList items={overdue} loading={isLoading} empty="Nadie te debe. ¡Bien hecho!" /></TabsContent>
+          <TabsContent value="pending"><ChargeList items={pendingList} loading={isLoading} empty="Sin cobros próximos." /></TabsContent>
           <TabsContent value="paid"><ChargeList items={paidList} loading={isLoading} empty="Aún no hay cobros pagados." /></TabsContent>
         </Tabs>
       </section>
