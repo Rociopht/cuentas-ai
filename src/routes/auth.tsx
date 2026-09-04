@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { authErrorMessage, passwordProblem, emailProblem } from "@/lib/auth-errors";
+import { startDemoSession } from "@/lib/demo.functions";
 
 type Search = { demo?: string };
 
@@ -22,7 +24,14 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
+
+  const pwdHint = mode === "signup" ? passwordProblem(password) : null;
+  const emailHint = emailProblem(email);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -31,53 +40,76 @@ function AuthPage() {
   }, [navigate]);
 
   useEffect(() => {
-    if (search.demo === "1" && !loading) {
-      void handleDemo();
-    }
+    if (search.demo === "1") void handleDemo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleDemo() {
-    setLoading(true);
-    const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const demoEmail = `demo-${stamp}@cuentas.ai`;
-    const demoPass = `Zx9$${stamp}${crypto.randomUUID().slice(0, 8)}Q!`;
-    const { error } = await supabase.auth.signUp({
-      email: demoEmail,
-      password: demoPass,
-      options: { emailRedirectTo: window.location.origin, data: { full_name: "Propietario Demo" } },
-    });
-    if (error) {
-      toast.error(error.message);
-      setLoading(false);
-      return;
+    setFormError(null);
+    setDemoLoading(true);
+    try {
+      // Sin signUp desde el navegador: el servidor entrega un token de un solo uso
+      // para la única cuenta demo compartida.
+      const { tokenHash } = await startDemoSession();
+      const { error } = await supabase.auth.verifyOtp({ type: "magiclink", token_hash: tokenHash });
+      if (error) throw error;
+      toast.success("Demo lista, con datos de ejemplo cargados.");
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      const msg = authErrorMessage(err);
+      setFormError(msg);
+      toast.error(msg);
+    } finally {
+      setDemoLoading(false);
     }
-    // Auto sign-in in case session isn't returned on signup
-    if (!(await supabase.auth.getSession()).data.session) {
-      await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPass });
-    }
-    toast.success("Cuenta demo lista. Datos precargados.");
-    navigate({ to: "/dashboard" });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setTouched(true);
+    setFormError(null);
+
+    if (emailHint) { setFormError(emailHint); return; }
+    if (mode === "signup" && (pwdHint || password.length < 8)) {
+      setFormError(pwdHint ?? "La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+
     setLoading(true);
-    if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: window.location.origin, data: { full_name: name } },
-      });
-      if (error) { toast.error(error.message); setLoading(false); return; }
-      toast.success("Bienvenido a Cuentas AI.");
-      navigate({ to: "/dashboard" });
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { toast.error(error.message); setLoading(false); return; }
-      navigate({ to: "/dashboard" });
+    try {
+      if (mode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin, data: { full_name: name } },
+        });
+        if (error) throw error;
+        // Si el proyecto pide confirmar email, no hay sesión: lo decimos claramente.
+        if (!data.session) {
+          const signIn = await supabase.auth.signInWithPassword({ email, password });
+          if (signIn.error) {
+            setFormError("Creamos tu cuenta. Confirma tu email con el enlace que te enviamos y luego ingresa.");
+            setMode("signin");
+            return;
+          }
+        }
+        toast.success("Bienvenido a Cuentas AI.");
+        navigate({ to: "/dashboard" });
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        navigate({ to: "/dashboard" });
+      }
+    } catch (err) {
+      const msg = authErrorMessage(err);
+      setFormError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   }
+
+  const busy = loading || demoLoading;
 
   return (
     <div className="grid min-h-screen bg-background md:grid-cols-2">
@@ -109,7 +141,14 @@ function AuthPage() {
             {mode === "signup" ? "Empieza a gestionar tus alquileres en minutos." : "Ingresa a tu panel."}
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          {formError && (
+            <div role="alert" className="mt-4 flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
             {mode === "signup" && (
               <div className="space-y-1.5">
                 <Label htmlFor="name">Nombre</Label>
@@ -118,13 +157,46 @@ function AuthPage() {
             )}
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" />
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+                aria-invalid={Boolean(touched && emailHint)}
+              />
+              {touched && emailHint && <p className="text-xs text-destructive">{emailHint}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pr-10"
+                  aria-invalid={Boolean(pwdHint)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  className="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {mode === "signup" && (
+                <p className={"text-xs " + (pwdHint ? "text-destructive" : "text-muted-foreground")}>
+                  {pwdHint ?? "Mínimo 8 caracteres, con letras y números."}
+                </p>
+              )}
             </div>
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            <Button type="submit" className="w-full" size="lg" disabled={busy}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "signup" ? "Crear cuenta" : "Ingresar"}
             </Button>
@@ -134,14 +206,19 @@ function AuthPage() {
             <div className="h-px flex-1 bg-border" /> o <div className="h-px flex-1 bg-border" />
           </div>
 
-          <Button type="button" variant="outline" className="w-full" onClick={handleDemo} disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Ver demo con datos reales
+          <Button type="button" variant="outline" className="w-full" onClick={handleDemo} disabled={busy}>
+            {demoLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Ver demo con datos de ejemplo
           </Button>
+          <p className="mt-2 text-center text-xs text-muted-foreground">El demo usa una cuenta compartida de solo ejemplo.</p>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "signup" ? "¿Ya tienes cuenta?" : "¿Nuevo aquí?"}{" "}
-            <button className="font-medium text-foreground underline-offset-4 hover:underline" onClick={() => setMode(mode === "signup" ? "signin" : "signup")}>
+            <button
+              type="button"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+              onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setFormError(null); setTouched(false); }}
+            >
               {mode === "signup" ? "Ingresar" : "Crear cuenta"}
             </button>
           </p>
