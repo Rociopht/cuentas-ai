@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/format";
-import { formatDate, isInMonth, todayISO } from "@/lib/date";
+import { formatDate, isInMonth, todayISO, dayOfMonth } from "@/lib/date";
 import { Plus, Receipt, Wrench, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
 import { fetchMonthlySeries } from "@/lib/analytics";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
@@ -285,7 +285,7 @@ function Expenses() {
             <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
               <div className="min-w-0">
                 <div className="truncate font-medium">{e.description ?? catLabel(e.category)}</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · vence el {e.due_day ?? new Date(e.expense_date.slice(0, 10).split("-").map(Number)[2] ?? 1, 0, 1).getDate()} de cada mes</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · vence el {e.due_day ?? dayOfMonth(e.expense_date)} de cada mes</div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-right">
@@ -302,7 +302,7 @@ function Expenses() {
       </section>
 
       <section>
-        <h2 className="mb-2 flex items-center gap-2 font-medium"><Receipt className="h-4 w-4 text-muted-foreground" /> Variables</h2>
+        <h2 className="mb-2 flex items-center gap-2 font-medium"><Receipt className="h-4 w-4 text-muted-foreground" /> Variables de este mes</h2>
         {catThis.size > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
             {Array.from(catThis.entries()).map(([cat, amount]) => {
@@ -324,7 +324,7 @@ function Expenses() {
           </div>
         )}
         <div className="space-y-2">
-          {varThis.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin gastos variables registrados.</Card>}
+          {varThis.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin gastos variables este mes.</Card>}
           {varThis.slice(0, 40).map((e) => (
             <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
               <div className="min-w-0">
@@ -338,10 +338,10 @@ function Expenses() {
       </section>
 
       <section>
-        <h2 className="mb-2 flex items-center gap-2 font-medium"><Wrench className="h-4 w-4 text-rust" /> Reparaciones / imprevistos</h2>
+        <h2 className="mb-2 flex items-center gap-2 font-medium"><Wrench className="h-4 w-4 text-rust" /> Reparaciones / imprevistos de este mes</h2>
         <p className="mb-2 text-xs text-muted-foreground">Estos gastos no cuentan para el promedio mensual típico en Rentabilidad.</p>
         <div className="space-y-2">
-          {repairsThisList.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin imprevistos registrados. Ojalá siga así.</Card>}
+          {repairsThisList.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin imprevistos este mes. Ojalá siga así.</Card>}
           {repairsThisList.slice(0, 40).map((e) => (
             <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-l-4 border-l-rust p-4">
               <div className="min-w-0">
