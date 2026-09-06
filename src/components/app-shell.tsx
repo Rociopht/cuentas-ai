@@ -23,6 +23,7 @@ const MOBILE_NAV = [NAV[0], NAV[1], NAV[3], NAV[4]] as const;
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const isDemo = useDemoMode();
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -62,6 +63,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <main className="md:ml-60 pb-20 md:pb-0">
+        {isDemo && (
+          <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 border-b border-warning/30 bg-warning/15 px-4 py-2 text-sm md:px-8">
+            <span className="text-warning-foreground">
+              Estás viendo el <strong>demo</strong> con datos de ejemplo. Nada de lo que hagas aquí es real.
+            </span>
+            <Button size="sm" variant="outline" className="h-8" onClick={signOut}>
+              <LogOut className="mr-1.5 h-3.5 w-3.5" /> Salir del demo
+            </Button>
+          </div>
+        )}
         <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>
 
