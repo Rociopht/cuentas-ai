@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { monthLabel } from "@/lib/format";
+import { parseDateOnly } from "@/lib/date";
 
 export type MonthPoint = {
   key: string;
@@ -50,7 +51,7 @@ export async function fetchMonthlySeries(months = 12): Promise<MonthPoint[]> {
     if (p) p.collected += Number(a.amount_allocated);
   }
   for (const e of expRes.data ?? []) {
-    const d = new Date(e.expense_date + "T00:00:00");
+    const d = parseDateOnly(e.expense_date);
     const p = index.get(`${d.getFullYear()}-${d.getMonth() + 1}`);
     if (!p) continue;
     const amount = Number(e.amount);

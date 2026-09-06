@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 
 /**
  * Acceso al demo, 100% server-side.
@@ -15,7 +14,8 @@ const DEMO_EMAIL = "demo@cuentas.ai";
 const WINDOW_MINUTES = 10;
 const MAX_PER_WINDOW = 8;
 
-function clientIp(): string {
+async function clientIp(): Promise<string> {
+  const { getRequest } = await import("@tanstack/react-start/server");
   const h = getRequest().headers;
   return (
     h.get("cf-connecting-ip") ??
@@ -35,7 +35,7 @@ async function hashIp(ip: string): Promise<string> {
 export const startDemoSession = createServerFn({ method: "POST" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const ipHash = await hashIp(clientIp());
+  const ipHash = await hashIp(await clientIp());
   const since = new Date(Date.now() - WINDOW_MINUTES * 60_000).toISOString();
 
   const { count } = await supabaseAdmin

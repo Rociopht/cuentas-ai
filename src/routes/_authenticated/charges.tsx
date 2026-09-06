@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatMoney, monthLabel, CHARGE_STATUS_COLOR, CHARGE_STATUS_LABEL } from "@/lib/format";
+import { formatDate, todayISO } from "@/lib/date";
 import { CheckCircle2, Inbox, Plus } from "lucide-react";
 import { fetchMonthlySeries } from "@/lib/analytics";
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, Tooltip, CartesianGrid } from "recharts";
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/charges")({
 function Charges() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ amount: "", payment_date: new Date().toISOString().slice(0, 10), payment_method: "transfer", unit_id: "", charge_id: "", notes: "" });
+  const [form, setForm] = useState({ amount: "", payment_date: todayISO(), payment_method: "transfer", unit_id: "", charge_id: "", notes: "" });
 
   const { data, isLoading } = useQuery({
     queryKey: ["charges-page"],
@@ -84,7 +85,7 @@ function Charges() {
     }
     toast.success("Pago registrado");
     setOpen(false);
-    setForm({ amount: "", payment_date: new Date().toISOString().slice(0, 10), payment_method: "transfer", unit_id: "", charge_id: "", notes: "" });
+    setForm({ amount: "", payment_date: todayISO(), payment_method: "transfer", unit_id: "", charge_id: "", notes: "" });
     qc.invalidateQueries();
   }
 
@@ -224,7 +225,7 @@ function Charges() {
               <Card key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{p.unit?.property?.name ?? "Sin identificar"}{p.unit ? ` · ${p.unit.name}` : ""}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">{new Date(p.payment_date).toLocaleDateString("es-PE")} · {p.payment_method}{p.notes ? ` · ${p.notes}` : ""}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">{formatDate(p.payment_date)} · {p.payment_method}{p.notes ? ` · ${p.notes}` : ""}</div>
                   <div className="mt-1 flex gap-1.5">
                     <Badge className={p.unit ? "bg-warning/15 text-warning-foreground border border-warning/30" : "bg-muted text-muted-foreground"}>
                       {p.unit ? "Posible coincidencia" : "Sin identificar"}
@@ -271,7 +272,7 @@ function ChargeList({ items, loading, empty }: { items: Row[]; loading: boolean;
             <div className="min-w-0">
               <div className="truncate font-medium">{c.unit?.property?.name} · {c.unit?.name}</div>
               <div className="mt-0.5 text-xs text-muted-foreground">
-                {c.tenant?.full_name ?? "—"} · {monthLabel(c.period_month)} {c.period_year} · vence {new Date(c.due_date).toLocaleDateString("es-PE")}
+                {c.tenant?.full_name ?? "—"} · {monthLabel(c.period_month)} {c.period_year} · vence {formatDate(c.due_date)}
               </div>
             </div>
             <div className="text-right">

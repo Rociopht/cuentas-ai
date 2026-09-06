@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { parseDateOnly, monthBounds, daysInMonth, startOfToday as startOfTodayUtil, dayOfMonth, daysFromToday, formatDate } from "@/lib/date";
 
 export type DayCharge = {
   id: string;
@@ -22,13 +23,11 @@ export type DayExpense = {
 };
 
 function clampDay(d: number, year: number, month: number) {
-  const last = new Date(year, month, 0).getDate();
-  return Math.min(Math.max(d || 1, 1), last);
+  return Math.min(Math.max(d || 1, 1), daysInMonth(year, month));
 }
 
 export async function fetchMonthSchedule(year: number, month: number) {
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const end = new Date(year, month, 0).toISOString().slice(0, 10);
+  const { start, end } = monthBounds(year, month);
 
   const [chargesRes, allocRes, expRes] = await Promise.all([
     supabase
@@ -51,8 +50,10 @@ export async function fetchMonthSchedule(year: number, month: number) {
   const charges: DayCharge[] = (chargesRes.data ?? []).map((c) => {
     const paid = paidMap.get(c.id) ?? 0;
     const expected = Number(c.amount_expected);
-    const day = clampDay(c.unit?.due_day ?? new Date(c.due_date).getUTCDate(), year, month);
-    const dueDate = new Date(year, month - 1, day);
+    // El día mostrado sale SIEMPRE del due_date del cobro (misma fuente que Cobros
+    // y que Comunicaciones), no del due_day de la unidad, que puede diferir.
+    const day = clampDay(dayOfMonth(c.due_date), year, month);
+    const dueDate = parseDateOnly(c.due_date);
     let status: DayCharge["status"];
     if (paid >= expected) status = "paid";
     else if (dueDate < startOfToday()) status = "overdue";
@@ -72,7 +73,7 @@ export async function fetchMonthSchedule(year: number, month: number) {
 
   const expenses: DayExpense[] = (expRes.data ?? []).map((e) => ({
     id: e.id,
-    day: clampDay(e.due_day ?? new Date(e.expense_date).getUTCDate(), year, month),
+    day: clampDay(e.due_day ?? dayOfMonth(e.expense_date), year, month),
     category: e.category,
     description: e.description,
     property: e.property?.name ?? "",
@@ -83,11 +84,7 @@ export async function fetchMonthSchedule(year: number, month: number) {
   return { year, month, charges, expenses };
 }
 
-export function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+export const startOfToday = startOfTodayUtil;
 
 export function daysUntil(year: number, month: number, day: number) {
   const target = new Date(year, month - 1, day);
@@ -139,13 +136,11 @@ export async function fetchCommTargets(): Promise<CommTarget[]> {
   const paid = new Map<string, number>();
   for (const a of aRes.data ?? []) paid.set(a.charge_id, (paid.get(a.charge_id) ?? 0) + Number(a.amount_allocated));
 
-  const today = startOfToday();
   return (cRes.data ?? [])
     .map((c) => {
       const expected = Number(c.amount_expected);
       const remaining = Math.max(expected - (paid.get(c.id) ?? 0), 0);
-      const due = new Date(c.due_date + "T00:00:00");
-      const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+      const diff = daysFromToday(c.due_date);
       return {
         chargeId: c.id,
         tenantId: c.tenant_id ?? null,
@@ -168,10 +163,10 @@ export function draftMessage(t: CommTarget): string {
   const monto = "S/ " + t.remaining.toLocaleString("es-PE", { maximumFractionDigits: 2 });
   const lugar = `${t.unit}${t.property ? ` (${t.property})` : ""}`;
   if (t.daysLate > 0) {
-    return `Hola ${t.tenant}, ¿cómo estás? Te escribo por el alquiler de ${lugar}. Al día de hoy figura pendiente ${monto}, con ${t.daysLate} ${t.daysLate === 1 ? "día" : "días"} de atraso respecto a la fecha acordada (${new Date(t.dueDate + "T00:00:00").toLocaleDateString("es-PE")}). Te agradecería mucho que lo puedas regularizar en los próximos días o me cuentes cuándo podrías hacerlo, para dejarlo ordenado. Cualquier duda me escribes con confianza. ¡Gracias!`;
+    return `Hola ${t.tenant}, ¿cómo estás? Te escribo por el alquiler de ${lugar}. Al día de hoy figura pendiente ${monto}, con ${t.daysLate} ${t.daysLate === 1 ? "día" : "días"} de atraso respecto a la fecha acordada (${formatDate(t.dueDate)}). Te agradecería mucho que lo puedas regularizar en los próximos días o me cuentes cuándo podrías hacerlo, para dejarlo ordenado. Cualquier duda me escribes con confianza. ¡Gracias!`;
   }
   const cuando = t.daysToDue === 0 ? "vence hoy" : `vence en ${t.daysToDue} ${t.daysToDue === 1 ? "día" : "días"}`;
-  return `Hola ${t.tenant}, espero que estés muy bien. Solo un recordatorio amable: el alquiler de ${lugar} ${cuando} (${new Date(t.dueDate + "T00:00:00").toLocaleDateString("es-PE")}) por ${monto}. Si ya lo enviaste, avísame para registrarlo. ¡Gracias y buen día!`;
+  return `Hola ${t.tenant}, espero que estés muy bien. Solo un recordatorio amable: el alquiler de ${lugar} ${cuando} (${formatDate(t.dueDate)}) por ${monto}. Si ya lo enviaste, avísame para registrarlo. ¡Gracias y buen día!`;
 }
 /* ---------- Historial de comunicaciones ---------- */
 

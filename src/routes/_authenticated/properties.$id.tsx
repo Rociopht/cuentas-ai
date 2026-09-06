@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { formatMoney, monthLabel, CHARGE_STATUS_COLOR, CHARGE_STATUS_LABEL } from "@/lib/format";
+import { formatDate } from "@/lib/date";
 import { ArrowLeft, Plus, Home as HomeIcon, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -132,7 +133,7 @@ function PropertyDetail() {
             <Card key={c.id} className="flex items-center justify-between p-4">
               <div>
                 <div className="font-medium">{(c.unit as { name: string }).name} · {monthLabel(c.period_month)} {c.period_year}</div>
-                <div className="text-xs text-muted-foreground">Vence {new Date(c.due_date).toLocaleDateString("es-PE")}</div>
+                <div className="text-xs text-muted-foreground">Vence {formatDate(c.due_date)}</div>
               </div>
               <div className="text-right">
                 <div className="font-semibold">{formatMoney(Number(c.amount_expected))}</div>
@@ -148,7 +149,7 @@ function PropertyDetail() {
             <Card key={e.id} className="flex items-center justify-between p-4">
               <div>
                 <div className="font-medium">{e.description ?? e.category}</div>
-                <div className="text-xs capitalize text-muted-foreground">{e.category} · {new Date(e.expense_date).toLocaleDateString("es-PE")}</div>
+                <div className="text-xs capitalize text-muted-foreground">{e.category} · {formatDate(e.expense_date)}</div>
               </div>
               <div className="font-semibold text-destructive">{formatMoney(Number(e.amount))}</div>
             </Card>
@@ -162,7 +163,7 @@ function PropertyDetail() {
             <Card key={c.id} className="flex items-center justify-between p-4">
               <div>
                 <div className="font-medium">{(c.tenant as { full_name: string } | null)?.full_name ?? "—"}</div>
-                <div className="text-xs text-muted-foreground">{(c.unit as { name: string }).name} · {new Date(c.start_date).toLocaleDateString("es-PE")}{c.end_date ? ` → ${new Date(c.end_date).toLocaleDateString("es-PE")}` : ""}</div>
+                <div className="text-xs text-muted-foreground">{(c.unit as { name: string }).name} · {formatDate(c.start_date)}{c.end_date ? ` → ${formatDate(c.end_date)}` : ""}</div>
               </div>
               <div className="text-right">
                 <div className="font-semibold">{formatMoney(Number(c.rent_amount))}/mes</div>
