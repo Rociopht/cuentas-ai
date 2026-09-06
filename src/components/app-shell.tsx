@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Home, Building2, Wallet, CalendarDays, MessageSquare, Receipt, LineChart, MoreHorizontal, LogOut, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useDemoMode } from "@/hooks/use-demo";
 import type { ReactNode } from "react";
+
 
 const NAV = [
   { to: "/dashboard", icon: Home, label: "Inicio" },
