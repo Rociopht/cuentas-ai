@@ -1,9 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
+import { monthBounds, todayISO, toISODate } from "@/lib/date";
 
+// Los límites del mes se construyen como strings YYYY-MM-DD (ver src/lib/date.ts):
+// usar toISOString() sobre una fecha local corría el rango un día en GMT-5.
 function periodBounds(year: number, month: number) {
-  const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 0);
-  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+  return monthBounds(year, month);
 }
 
 export async function fetchDashboard(year: number, month: number) {
@@ -54,8 +55,8 @@ export async function fetchDashboard(year: number, month: number) {
     .from("contracts")
     .select("id, end_date, unit:units(name, property:properties(name)), tenant:tenants(full_name)")
     .eq("status", "active")
-    .lte("end_date", in30.toISOString().slice(0, 10))
-    .gte("end_date", new Date().toISOString().slice(0, 10));
+    .lte("end_date", toISODate(in30))
+    .gte("end_date", todayISO());
 
   return {
     period: { year, month },

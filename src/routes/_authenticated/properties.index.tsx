@@ -11,7 +11,7 @@ import { Building2, Plus, MapPin } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/properties")({
+export const Route = createFileRoute("/_authenticated/properties/")({
   component: Properties,
 });
 

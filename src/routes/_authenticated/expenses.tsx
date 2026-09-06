@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/format";
+import { formatDate, isInMonth, todayISO } from "@/lib/date";
 import { Plus, Receipt, Wrench, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
 import { fetchMonthlySeries } from "@/lib/analytics";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
@@ -61,7 +62,7 @@ function Expenses() {
   const [open, setOpen] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<Exp | null>(null);
   const [confirmAmount, setConfirmAmount] = useState("");
-  const [form, setForm] = useState({ expense_type: "variable", due_day: "1", property_id: "", unit_id: "", category: "maintenance", amount: "", description: "", expense_date: new Date().toISOString().slice(0, 10) });
+  const [form, setForm] = useState({ expense_type: "variable", due_day: "1", property_id: "", unit_id: "", category: "maintenance", amount: "", description: "", expense_date: todayISO() });
 
   useEffect(() => {
     supabase.rpc("ensure_monthly_fixed_expenses").then(({ data: n }) => {
@@ -100,7 +101,7 @@ function Expenses() {
     if (error) { toast.error(error.message); return; }
     toast.success("Gasto registrado");
     setOpen(false);
-    setForm({ expense_type: "variable", due_day: "1", property_id: "", unit_id: "", category: "maintenance", amount: "", description: "", expense_date: new Date().toISOString().slice(0, 10) });
+    setForm({ expense_type: "variable", due_day: "1", property_id: "", unit_id: "", category: "maintenance", amount: "", description: "", expense_date: todayISO() });
     qc.invalidateQueries();
   }
 
@@ -117,10 +118,10 @@ function Expenses() {
 
   const all = data?.expenses ?? [];
   const now = new Date();
+  // Un solo criterio de "pertenece al mes", por día calendario (sin UTC de por medio).
   const inMonth = (e: Exp, offset: number) => {
-    const d = new Date(e.expense_date + "T00:00:00");
     const ref = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
+    return isInMonth(e.expense_date, ref.getFullYear(), ref.getMonth() + 1);
   };
 
   const fixed = all.filter((e) => e.expense_type === "fijo_recurrente");
@@ -129,6 +130,7 @@ function Expenses() {
   const repairs = all.filter((e) => e.expense_type === "reparacion");
 
   const varThis = variables.filter((e) => inMonth(e, 0));
+  const repairsThisList = repairs.filter((e) => inMonth(e, 0));
   const varPrev = variables.filter((e) => inMonth(e, 1));
   const byCat = (rows: Exp[]) => {
     const m = new Map<string, number>();
@@ -283,7 +285,7 @@ function Expenses() {
             <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
               <div className="min-w-0">
                 <div className="truncate font-medium">{e.description ?? catLabel(e.category)}</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · vence el {e.due_day ?? new Date(e.expense_date + "T00:00:00").getDate()} de cada mes</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · vence el {e.due_day ?? new Date(e.expense_date.slice(0, 10).split("-").map(Number)[2] ?? 1, 0, 1).getDate()} de cada mes</div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-right">
@@ -322,12 +324,12 @@ function Expenses() {
           </div>
         )}
         <div className="space-y-2">
-          {variables.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin gastos variables registrados.</Card>}
-          {variables.slice(0, 40).map((e) => (
+          {varThis.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin gastos variables registrados.</Card>}
+          {varThis.slice(0, 40).map((e) => (
             <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
               <div className="min-w-0">
                 <div className="truncate font-medium">{e.description ?? catLabel(e.category)}</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · {new Date(e.expense_date + "T00:00:00").toLocaleDateString("es-PE")}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · {formatDate(e.expense_date)}</div>
               </div>
               <div className="text-right font-semibold text-destructive">{formatMoney(Number(e.amount))}</div>
             </Card>
@@ -339,12 +341,12 @@ function Expenses() {
         <h2 className="mb-2 flex items-center gap-2 font-medium"><Wrench className="h-4 w-4 text-rust" /> Reparaciones / imprevistos</h2>
         <p className="mb-2 text-xs text-muted-foreground">Estos gastos no cuentan para el promedio mensual típico en Rentabilidad.</p>
         <div className="space-y-2">
-          {repairs.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin imprevistos registrados. Ojalá siga así.</Card>}
-          {repairs.slice(0, 40).map((e) => (
+          {repairsThisList.length === 0 && <Card className="p-6 text-center text-sm text-muted-foreground">Sin imprevistos registrados. Ojalá siga así.</Card>}
+          {repairsThisList.slice(0, 40).map((e) => (
             <Card key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-l-4 border-l-rust p-4">
               <div className="min-w-0">
                 <div className="truncate font-medium">{e.description ?? catLabel(e.category)}</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · {new Date(e.expense_date + "T00:00:00").toLocaleDateString("es-PE")}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{e.property?.name}{e.unit ? ` · ${e.unit.name}` : ""} · {formatDate(e.expense_date)}</div>
               </div>
               <div className="text-right font-semibold text-rust">{formatMoney(Number(e.amount))}</div>
             </Card>
