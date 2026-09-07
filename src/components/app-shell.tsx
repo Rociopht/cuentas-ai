@@ -9,16 +9,19 @@ import type { ReactNode } from "react";
 
 const NAV = [
   { to: "/dashboard", icon: Home, label: "Inicio" },
-  { to: "/calendar", icon: CalendarDays, label: "Calendario" },
   { to: "/properties", icon: Building2, label: "Propiedades" },
   { to: "/charges", icon: Wallet, label: "Cobros" },
-  { to: "/communications", icon: MessageSquare, label: "Comunicaciones" },
   { to: "/expenses", icon: Receipt, label: "Gastos" },
+] as const;
+
+const NAV_SECONDARY = [
+  { to: "/calendar", icon: CalendarDays, label: "Calendario" },
   { to: "/profitability", icon: LineChart, label: "Rentabilidad" },
   { to: "/activity", icon: Activity, label: "Actividad" },
 ] as const;
 
-const MOBILE_NAV = [NAV[0], NAV[1], NAV[3], NAV[4]] as const;
+const MOBILE_NAV = NAV;
+
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
