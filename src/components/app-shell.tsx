@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Home, Building2, Wallet, CalendarDays, Receipt, LineChart, MoreHorizontal, LogOut, Activity } from "lucide-react";
+import { Home, Building2, Wallet, CalendarDays, Receipt, LineChart, MoreHorizontal, LogOut, Activity, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/hooks/use-demo";
@@ -12,6 +12,7 @@ const NAV = [
   { to: "/properties", icon: Building2, label: "Propiedades" },
   { to: "/charges", icon: Wallet, label: "Cobros" },
   { to: "/expenses", icon: Receipt, label: "Gastos" },
+  { to: "/agent", icon: Sparkles, label: "Agente AI" },
 ] as const;
 
 const NAV_SECONDARY = [
