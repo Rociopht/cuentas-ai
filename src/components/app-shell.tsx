@@ -57,7 +57,25 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          <div className="pt-4 pb-1 px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Análisis</div>
+          {NAV_SECONDARY.map(({ to, icon: Icon, label }) => {
+            const active = pathname === to || pathname.startsWith(to + "/");
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  active ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            );
+          })}
         </nav>
+
         <div className="border-t p-3">
           <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={signOut}>
             <LogOut className="h-4 w-4" /> Salir
