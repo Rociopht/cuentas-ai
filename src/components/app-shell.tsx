@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Home, Building2, Wallet, CalendarDays, MessageSquare, Receipt, LineChart, MoreHorizontal, LogOut, Activity } from "lucide-react";
+import { Home, Building2, Wallet, CalendarDays, Receipt, LineChart, MoreHorizontal, LogOut, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/hooks/use-demo";
@@ -9,16 +9,19 @@ import type { ReactNode } from "react";
 
 const NAV = [
   { to: "/dashboard", icon: Home, label: "Inicio" },
-  { to: "/calendar", icon: CalendarDays, label: "Calendario" },
   { to: "/properties", icon: Building2, label: "Propiedades" },
   { to: "/charges", icon: Wallet, label: "Cobros" },
-  { to: "/communications", icon: MessageSquare, label: "Comunicaciones" },
   { to: "/expenses", icon: Receipt, label: "Gastos" },
+] as const;
+
+const NAV_SECONDARY = [
+  { to: "/calendar", icon: CalendarDays, label: "Calendario" },
   { to: "/profitability", icon: LineChart, label: "Rentabilidad" },
   { to: "/activity", icon: Activity, label: "Actividad" },
 ] as const;
 
-const MOBILE_NAV = [NAV[0], NAV[1], NAV[3], NAV[4]] as const;
+const MOBILE_NAV = NAV;
+
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -54,7 +57,25 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          <div className="pt-4 pb-1 px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Análisis</div>
+          {NAV_SECONDARY.map(({ to, icon: Icon, label }) => {
+            const active = pathname === to || pathname.startsWith(to + "/");
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  active ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            );
+          })}
         </nav>
+
         <div className="border-t p-3">
           <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={signOut}>
             <LogOut className="h-4 w-4" /> Salir

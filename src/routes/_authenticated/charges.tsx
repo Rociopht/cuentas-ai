@@ -12,9 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatMoney, monthLabel, CHARGE_STATUS_COLOR, CHARGE_STATUS_LABEL } from "@/lib/format";
 import { formatDate, todayISO } from "@/lib/date";
-import { CheckCircle2, Inbox, Plus } from "lucide-react";
+import { CheckCircle2, Inbox, Plus, MoreHorizontal, Loader2, MessageCircle } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ensureCurrentMonthCharges } from "@/lib/ensure-charges";
+import { daysFromToday, dayOfMonth } from "@/lib/date";
 import { fetchMonthlySeries } from "@/lib/analytics";
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, Tooltip, CartesianGrid } from "recharts";
+
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
@@ -35,13 +39,16 @@ export const Route = createFileRoute("/_authenticated/charges")({
 function Charges() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ amount: "", payment_date: todayISO(), payment_method: "transfer", unit_id: "", charge_id: "", notes: "" });
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ amount: "", payment_date: todayISO(), payment_method: "transferencia", unit_id: "", charge_id: "", notes: "" });
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["charges-page"],
     queryFn: async () => {
+      await ensureCurrentMonthCharges();
       const [c, a, payments, units] = await Promise.all([
-        supabase.from("charges").select("id, unit_id, period_year, period_month, amount_expected, status, due_date, unit:units(name, property:properties(name)), tenant:tenants(full_name)").order("due_date", { ascending: false }).limit(200),
+        supabase.from("charges").select("id, unit_id, period_year, period_month, amount_expected, status, due_date, unit:units(name, property:properties(name)), tenant:tenants(full_name, phone), contract:contracts(currency)").order("due_date", { ascending: false }).limit(200),
         supabase.from("payment_allocations").select("charge_id, amount_allocated"),
         supabase.from("payments").select("id, amount, payment_date, payment_method, status, notes, unit:units(name, property:properties(name)), tenant:tenants(full_name)").order("payment_date", { ascending: false }).limit(60),
         supabase.from("units").select("id, name, property:properties(name)").order("name"),
@@ -55,6 +62,42 @@ function Charges() {
       };
     },
   });
+
+  async function quickPay(row: Row) {
+    const remaining = Math.max(Number(row.amount_expected) - row.paid, 0);
+    if (remaining <= 0) return;
+    setPayingId(row.id);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const owner_id = userData.user?.id;
+      if (!owner_id) { toast.error("Tu sesión expiró"); return; }
+      const { data: pay, error } = await supabase.from("payments").insert({
+        owner_id,
+        amount: remaining,
+        payment_date: todayISO(),
+        payment_method: "transferencia",
+        unit_id: row.unit_id,
+        status: "confirmed",
+        notes: "Pago completo registrado desde Cobros",
+      }).select("id").single();
+      if (error || !pay) { toast.error(error?.message ?? "No se pudo registrar"); return; }
+      const { error: aErr } = await supabase.from("payment_allocations").insert({
+        owner_id, payment_id: pay.id, charge_id: row.id, amount_allocated: remaining,
+      });
+      if (aErr) { toast.error(aErr.message); return; }
+      await supabase.rpc("recalc_charge_status", { _charge_id: row.id });
+      toast.success(`Pago de ${formatMoney(remaining)} registrado`);
+      await qc.invalidateQueries();
+    } finally {
+      setPayingId(null);
+    }
+  }
+
+  function openPartial(row: Row) {
+    setForm({ amount: String(Math.max(Number(row.amount_expected) - row.paid, 0)), payment_date: todayISO(), payment_method: "transferencia", unit_id: row.unit_id, charge_id: row.id, notes: "" });
+    setOpen(true);
+  }
+
 
   async function createPayment() {
     const { data: userData } = await supabase.auth.getUser();

@@ -13,6 +13,8 @@ import { formatDate } from "@/lib/date";
 import { ArrowLeft, Plus, Home as HomeIcon, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { NewLeaseDialog } from "@/components/new-lease-dialog";
+
 
 export const Route = createFileRoute("/_authenticated/properties/$id")({
   component: PropertyDetail,
@@ -84,9 +86,10 @@ function PropertyDetail() {
         </TabsList>
 
         <TabsContent value="units" className="space-y-3">
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <NewLeaseDialog units={data.units.map((u) => ({ id: u.id, name: u.name }))} label="Nuevo alquiler" />
             <Dialog open={unitOpen} onOpenChange={setUnitOpen}>
-              <DialogTrigger asChild><Button size="sm"><Plus className="mr-1 h-4 w-4" />Nueva unidad</Button></DialogTrigger>
+              <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" />Nueva unidad</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Nueva unidad</DialogTitle></DialogHeader>
                 <div className="space-y-3">
@@ -97,6 +100,7 @@ function PropertyDetail() {
               </DialogContent>
             </Dialog>
           </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             {data.units.map((u) => {
               const active = activeByUnit.get(u.id);
@@ -120,7 +124,11 @@ function PropertyDetail() {
                         <div className="mt-0.5 text-foreground">{active.tenant.full_name}</div>
                       </div>
                     )}
+                    {!active && (
+                      <NewLeaseDialog units={[{ id: u.id, name: u.name }]} defaultUnitId={u.id} label="Registrar inquilino" variant="outline" />
+                    )}
                   </div>
+
                 </Card>
               );
             })}
@@ -159,6 +167,10 @@ function PropertyDetail() {
         </TabsContent>
 
         <TabsContent value="contracts" className="space-y-2">
+          <div className="flex justify-end">
+            <NewLeaseDialog units={data.units.map((u) => ({ id: u.id, name: u.name }))} label="Registrar inquilino" />
+          </div>
+
           {data.contracts.map((c) => (
             <Card key={c.id} className="flex items-center justify-between p-4">
               <div>
