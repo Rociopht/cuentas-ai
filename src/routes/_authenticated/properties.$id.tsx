@@ -13,6 +13,8 @@ import { formatDate } from "@/lib/date";
 import { ArrowLeft, Plus, Home as HomeIcon, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { NewLeaseDialog } from "@/components/new-lease-dialog";
+
 
 export const Route = createFileRoute("/_authenticated/properties/$id")({
   component: PropertyDetail,
