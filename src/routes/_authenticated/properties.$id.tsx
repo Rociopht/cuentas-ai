@@ -161,6 +161,10 @@ function PropertyDetail() {
         </TabsContent>
 
         <TabsContent value="contracts" className="space-y-2">
+          <div className="flex justify-end">
+            <NewLeaseDialog units={data.units.map((u) => ({ id: u.id, name: u.name }))} label="Registrar inquilino" />
+          </div>
+
           {data.contracts.map((c) => (
             <Card key={c.id} className="flex items-center justify-between p-4">
               <div>
