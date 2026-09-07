@@ -120,6 +120,7 @@ export type Database = {
       contracts: {
         Row: {
           created_at: string
+          currency: string
           deposit_amount: number | null
           document_url: string | null
           end_date: string | null
@@ -136,6 +137,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          currency?: string
           deposit_amount?: number | null
           document_url?: string | null
           end_date?: string | null
@@ -152,6 +154,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          currency?: string
           deposit_amount?: number | null
           document_url?: string | null
           end_date?: string | null
