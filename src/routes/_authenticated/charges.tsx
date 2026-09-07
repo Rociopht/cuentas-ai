@@ -12,9 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatMoney, monthLabel, CHARGE_STATUS_COLOR, CHARGE_STATUS_LABEL } from "@/lib/format";
 import { formatDate, todayISO } from "@/lib/date";
-import { CheckCircle2, Inbox, Plus } from "lucide-react";
+import { CheckCircle2, Inbox, Plus, MoreHorizontal, Loader2, MessageCircle } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ensureCurrentMonthCharges } from "@/lib/ensure-charges";
+import { daysFromToday, dayOfMonth } from "@/lib/date";
 import { fetchMonthlySeries } from "@/lib/analytics";
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, Tooltip, CartesianGrid } from "recharts";
+
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
