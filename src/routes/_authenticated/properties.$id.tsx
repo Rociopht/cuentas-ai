@@ -84,9 +84,10 @@ function PropertyDetail() {
         </TabsList>
 
         <TabsContent value="units" className="space-y-3">
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <NewLeaseDialog units={data.units.map((u) => ({ id: u.id, name: u.name }))} label="Nuevo alquiler" />
             <Dialog open={unitOpen} onOpenChange={setUnitOpen}>
-              <DialogTrigger asChild><Button size="sm"><Plus className="mr-1 h-4 w-4" />Nueva unidad</Button></DialogTrigger>
+              <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" />Nueva unidad</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Nueva unidad</DialogTitle></DialogHeader>
                 <div className="space-y-3">
@@ -97,6 +98,7 @@ function PropertyDetail() {
               </DialogContent>
             </Dialog>
           </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             {data.units.map((u) => {
               const active = activeByUnit.get(u.id);
