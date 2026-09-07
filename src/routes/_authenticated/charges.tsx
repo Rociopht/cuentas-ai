@@ -35,7 +35,9 @@ export const Route = createFileRoute("/_authenticated/charges")({
 function Charges() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ amount: "", payment_date: todayISO(), payment_method: "transfer", unit_id: "", charge_id: "", notes: "" });
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ amount: "", payment_date: todayISO(), payment_method: "transferencia", unit_id: "", charge_id: "", notes: "" });
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["charges-page"],
