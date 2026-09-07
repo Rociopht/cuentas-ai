@@ -53,9 +53,9 @@ export async function fetchDashboard(year: number, month: number) {
     .select("*", { count: "exact", head: true })
     .eq("status", "pending_review");
 
-  const in30 = new Date();
+  const in30 = new Date(); 
   in30.setDate(in30.getDate() + 30);
-
+  
   const { data: expiring } = await supabase
     .from("contracts")
     .select("id, end_date, unit:units(name, property:properties(name)), tenant:tenants(full_name)")
@@ -70,3 +70,4 @@ export async function fetchDashboard(year: number, month: number) {
     properties: Array.from(propMap.values()).map((p) => ({ ...p, result: p.collected - p.spent, pending: Math.max(p.expected - p.collected, 0) })),
     expiringContracts: expiring ?? [],
   };
+}
