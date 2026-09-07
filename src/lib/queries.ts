@@ -48,13 +48,17 @@ export async function fetchDashboard(year: number, month: number) {
   const overdue = charges.filter((c) => c.status === "overdue").length;
   const partial = charges.filter((c) => c.status === "partial").length;
 
-  const { count: reviewCount } = await supabase.from("payments").select("*", { count: "exact", head: true }).eq("status", "pending_review");
+  const { count: reviewCount } = await supabase
+    .from("payments")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending_review");
 
-  const in30 = new Date(); in30.setDate(in30.getDate() + 30);
+  const in30 = new Date();
+  in30.setDate(in30.getDate() + 30);
+
   const { data: expiring } = await supabase
     .from("contracts")
- };
-   .select("id, end_date, unit:units(name, property:properties(name)), tenant:tenants(full_name)")
+    .select("id, end_date, unit:units(name, property:properties(name)), tenant:tenants(full_name)")
     .eq("status", "active")
     .lte("end_date", toISODate(in30))
     .gte("end_date", todayISO());
@@ -65,4 +69,4 @@ export async function fetchDashboard(year: number, month: number) {
     counts: { overdue, partial, review: reviewCount ?? 0, expiring: expiring?.length ?? 0 },
     properties: Array.from(propMap.values()).map((p) => ({ ...p, result: p.collected - p.spent, pending: Math.max(p.expected - p.collected, 0) })),
     expiringContracts: expiring ?? [],
-  
+  };
