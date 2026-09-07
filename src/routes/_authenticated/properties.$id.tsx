@@ -124,7 +124,11 @@ function PropertyDetail() {
                         <div className="mt-0.5 text-foreground">{active.tenant.full_name}</div>
                       </div>
                     )}
+                    {!active && (
+                      <NewLeaseDialog units={[{ id: u.id, name: u.name }]} defaultUnitId={u.id} label="Registrar inquilino" variant="outline" />
+                    )}
                   </div>
+
                 </Card>
               );
             })}
