@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Home, Building2, Wallet, CalendarDays, MessageSquare, Receipt, LineChart, MoreHorizontal, LogOut, Activity } from "lucide-react";
+import { Home, Building2, Wallet, CalendarDays, Receipt, LineChart, MoreHorizontal, LogOut, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/hooks/use-demo";
