@@ -54,7 +54,7 @@ export async function fetchDashboard(year: number, month: number) {
   const { data: expiring } = await supabase
     .from("contracts")
  };
-}   .select("id, end_date, unit:units(name, property:properties(name)), tenant:tenants(full_name)")
+   .select("id, end_date, unit:units(name, property:properties(name)), tenant:tenants(full_name)")
     .eq("status", "active")
     .lte("end_date", toISODate(in30))
     .gte("end_date", todayISO());
